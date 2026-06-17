@@ -11,16 +11,6 @@ from app.core.security import get_current_user, require_role
 router = APIRouter(prefix="/api/opportunities", tags=["Opportunities"])
 
 
-def _build_out(opp: Opportunity) -> dict:
-    """Attach required_skills list to the opportunity response."""
-    data = OpportunityOut.model_validate(opp).model_dump()
-    data["required_skills"] = [
-        {"id": os.skill.id, "name": os.skill.name}
-        for os in opp.opportunity_skills
-    ]
-    return data
-
-
 @router.post("/", response_model=OpportunityOut, status_code=201)
 def create_opportunity(
     payload: OpportunityIn,
@@ -66,7 +56,11 @@ def list_opportunities(
 
 
 @router.get("/{opp_id}", response_model=OpportunityOut)
-def get_opportunity(opp_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+def get_opportunity(
+    opp_id: int,
+    db: Session = Depends(get_db),
+    _=Depends(get_current_user),
+):
     opp = db.query(Opportunity).filter(Opportunity.id == opp_id).first()
     if not opp:
         raise HTTPException(404, "Opportunity not found")
@@ -81,7 +75,8 @@ def update_opportunity(
     current_user=Depends(require_role(UserRole.investor, UserRole.organization)),
 ):
     opp = db.query(Opportunity).filter(
-        Opportunity.id == opp_id, Opportunity.posted_by == current_user.id
+        Opportunity.id == opp_id,
+        Opportunity.posted_by == current_user.id
     ).first()
     if not opp:
         raise HTTPException(404, "Opportunity not found or unauthorized")
@@ -91,7 +86,9 @@ def update_opportunity(
         setattr(opp, k, v)
 
     if payload.skill_ids is not None:
-        db.query(OpportunitySkill).filter(OpportunitySkill.opportunity_id == opp_id).delete()
+        db.query(OpportunitySkill).filter(
+            OpportunitySkill.opportunity_id == opp_id
+        ).delete()
         for sid in payload.skill_ids:
             db.add(OpportunitySkill(opportunity_id=opp_id, skill_id=sid))
 

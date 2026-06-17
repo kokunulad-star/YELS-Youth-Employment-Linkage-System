@@ -15,24 +15,20 @@ class ApplicationStatusUpdate(BaseModel):
 
 
 class StatusHistoryOut(BaseModel):
-    old_status: Optional[ApplicationStatus]
-    new_status: Optional[ApplicationStatus]
-    note: Optional[str]
+    old_status: Optional[ApplicationStatus] = None
+    new_status: Optional[ApplicationStatus] = None
+    note: Optional[str] = None
     changed_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ApplicationOut(BaseModel):
     id: int
     youth_id: int
     opportunity_id: int
-    cover_letter: Optional[str]
+    cover_letter: Optional[str] = None
     status: ApplicationStatus
     applied_at: datetime
     updated_at: datetime
     history: List[StatusHistoryOut] = []
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

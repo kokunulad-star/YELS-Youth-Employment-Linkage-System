@@ -10,8 +10,6 @@ class NotificationOut(BaseModel):
     message: str
     type: NotificationType
     is_read: bool
-    related_id: Optional[int]
+    related_id: Optional[int] = None
     created_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from datetime import date
 from typing import Optional, List
 from app.models.youth import GenderEnum, SkillLevel
@@ -8,10 +8,10 @@ from app.models.youth import GenderEnum, SkillLevel
 class SkillBase(BaseModel):
     name: str
 
-class SkillOut(SkillBase):
+class SkillOut(BaseModel):
     id: int
-    class Config:
-        from_attributes = True
+    name: str
+    model_config = {"from_attributes": True}
 
 
 # ---------- Youth Skill ----------
@@ -21,9 +21,8 @@ class YouthSkillIn(BaseModel):
 
 class YouthSkillOut(BaseModel):
     skill: SkillOut
-    level: Optional[SkillLevel]
-    class Config:
-        from_attributes = True
+    level: Optional[SkillLevel] = None
+    model_config = {"from_attributes": True}
 
 
 # ---------- Education ----------
@@ -37,8 +36,7 @@ class EducationIn(BaseModel):
 
 class EducationOut(EducationIn):
     id: int
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 # ---------- Youth Profile ----------
@@ -54,27 +52,34 @@ class YouthProfileIn(BaseModel):
     github_url: Optional[str] = None
     portfolio_url: Optional[str] = None
 
-class YouthProfileUpdate(YouthProfileIn):
+class YouthProfileUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    gender: Optional[GenderEnum] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    bio: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
 
 class YouthProfileOut(BaseModel):
     id: int
     user_id: int
     first_name: str
     last_name: str
-    date_of_birth: Optional[date]
-    gender: Optional[GenderEnum]
-    phone: Optional[str]
-    location: Optional[str]
-    bio: Optional[str]
-    cv_url: Optional[str]
-    linkedin_url: Optional[str]
-    github_url: Optional[str]
-    portfolio_url: Optional[str]
-    profile_photo_url: Optional[str]
+    date_of_birth: Optional[date] = None
+    gender: Optional[GenderEnum] = None
+    phone: Optional[str] = None
+    location: Optional[str] = None
+    bio: Optional[str] = None
+    cv_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    github_url: Optional[str] = None
+    portfolio_url: Optional[str] = None
+    profile_photo_url: Optional[str] = None
     education: List[EducationOut] = []
     youth_skills: List[YouthSkillOut] = []
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

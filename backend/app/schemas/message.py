@@ -15,9 +15,7 @@ class MessageOut(BaseModel):
     body: str
     is_read: bool
     sent_at: datetime
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class ConversationOut(BaseModel):
@@ -25,6 +23,4 @@ class ConversationOut(BaseModel):
     participant_1: int
     participant_2: int
     messages: List[MessageOut] = []
-
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

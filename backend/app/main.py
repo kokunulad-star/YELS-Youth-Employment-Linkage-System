@@ -9,7 +9,7 @@ from app.config import get_settings
 # Import all models so SQLAlchemy registers them before create_all
 import app.models  # noqa: F401
 
-from app.routers import auth, youth, profiles, opportunities, applications, notifications, messages, admin
+from app.routers import auth, youth, profiles, opportunities, applications, notifications, messages, admin, skills
 
 settings = get_settings()
 
@@ -46,6 +46,7 @@ app.include_router(opportunities.router)
 app.include_router(applications.router)
 app.include_router(notifications.router)
 app.include_router(messages.router)
+app.include_router(skills.router)
 app.include_router(admin.router)
 
 

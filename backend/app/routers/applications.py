@@ -24,8 +24,7 @@ def apply(
     if not profile:
         raise HTTPException(400, "Complete your youth profile before applying")
 
-    opp = db.query(Opportunity).fi
-lter(Opportunity.id == payload.opportunity_id).first()
+    opp = db.query(Opportunity).filter(Opportunity.id == payload.opportunity_id).first()
     if not opp or opp.status != "open":
         raise HTTPException(404, "Opportunity not found or closed")
 
