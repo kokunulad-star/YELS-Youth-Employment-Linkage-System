@@ -115,7 +115,95 @@ Tasks ranked from **simplest** to **most complex** implementation.
 
 ## Phase 3 — Substantial (4–8 hours each)
 
-### 8. Set up Alembic migrations
+### 8. Add password reset flow
+
+**Issue:** No way for users to recover a forgotten password. If a user loses their password, they're locked out permanently.
+
+**Files to create/touch:**
+- `backend/app/routers/auth.py` (add endpoints)
+- `backend/app/schemas/auth.py` (add schemas)
+- `backend/requirements.txt` (add email library if not present)
+- `backend/app/core/email.py` (new — email sending helper)
+- `backend/.env.example` (add SMTP config vars)
+- `backend/app/config.py` (add SMTP settings)
+- `frontend/src/pages/ForgotPassword.jsx` (new)
+- `frontend/src/pages/ResetPassword.jsx` (new)
+- `frontend/src/App.jsx` (add routes)
+- `frontend/src/components/Navbar.jsx` (add "Forgot Password?" link)
+
+**Action:**
+- **Backend:**
+  - `POST /api/auth/forgot-password` — accepts email, generates a short-lived JWT reset token, sends email with reset link
+  - `POST /api/auth/reset-password` — accepts token + new password, validates token, updates password hash
+  - Add `RESET_TOKEN_EXPIRE_MINUTES=30` to config
+  - Add SMTP settings to `.env.example` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`)
+  - Create email helper that sends HTML emails via `smtplib` or `aiofiles`
+- **Frontend:**
+  - `ForgotPassword` — email input form, posts to `/api/auth/forgot-password`, shows success message
+  - `ResetPassword` — reads token from URL query param, shows new password + confirm form, posts to `/api/auth/reset-password`
+  - Add "Forgot password?" link on login page
+
+**Complexity:** ⭐⭐⭐
+
+---
+
+### 9. Add email verification on registration
+
+**Issue:** Users can register with any email without proving ownership. This allows fake/spam accounts and prevents reliable email-based communication.
+
+**Files to create/touch:**
+- `backend/app/routers/auth.py` (modify register, add verify endpoint)
+- `backend/app/schemas/auth.py` (add schemas)
+- `backend/app/core/email.py` (reuse from password reset)
+- `backend/app/models/user.py` (add `email_verified` column)
+- `db/schema.sql` (add column)
+- `frontend/src/pages/VerifyEmail.jsx` (new)
+- `frontend/src/App.jsx` (add route)
+
+**Action:**
+- **Backend:**
+  - Add `email_verified: bool = False` column to User model
+  - Modify `POST /api/auth/register` to also send a verification email with a JWT token
+  - `GET /api/auth/verify-email?token=...` — validates token, sets `email_verified = True`
+  - Optionally block login until email is verified (configurable via setting)
+- **Frontend:**
+  - `VerifyEmail` page that reads token from URL, calls verify endpoint, shows success/error
+  - Show a "Verify your email" banner on dashboard if not yet verified
+  - Add "Resend verification email" button
+
+**Complexity:** ⭐⭐⭐
+
+---
+
+### 10. Add refresh token rotation
+
+**Issue:** Current JWT tokens are valid for 60 minutes with no way to refresh. If a token is compromised, it's valid until expiry. Users must log in again after expiry.
+
+**Files to create/touch:**
+- `backend/app/routers/auth.py` (add refresh endpoint)
+- `backend/app/schemas/auth.py` (add schemas)
+- `backend/app/core/security.py` (add refresh token logic)
+- `backend/app/config.py` (add refresh config)
+- `backend/.env.example` (add vars)
+- `frontend/src/lib/api.js` (add interceptor logic)
+
+**Action:**
+- **Backend:**
+  - `POST /api/auth/refresh` — accepts refresh token, validates it, issues a new access token + new refresh token (rotation)
+  - Access token: short-lived (15 min), Refresh token: long-lived (7 days)
+  - Store refresh token hash in DB or as a separate table for revocation support
+  - Blacklist old refresh tokens on rotation to prevent replay attacks
+- **Frontend:**
+  - Add response interceptor in `api.js`: on 401, attempt silent refresh via `/api/auth/refresh`
+  - If refresh succeeds, retry the original request
+  - If refresh fails, redirect to login
+  - Store refresh token in `localStorage` alongside access token
+
+**Complexity:** ⭐⭐⭐
+
+---
+
+### 11. Set up Alembic migrations
 
 **Issue:** `alembic/versions/` is empty. The app relies on `Base.metadata.create_all()` which is unsafe for production (no change tracking, no rollback).
 
@@ -131,7 +219,7 @@ Then update `main.py` to remove the `create_all()` call and document migration w
 
 ---
 
-### 9. Add "Business Ideas" / Pitch feature
+### 12. Add "Business Ideas" / Pitch feature
 
 **Issue:** Proposal mentions youth showcasing business ideas to attract investors. Current system only has a generic bio.
 
@@ -153,7 +241,7 @@ Then update `main.py` to remove the `create_all()` call and document migration w
 
 ---
 
-### 10. Add tests
+### 13. Add tests
 
 **Issue:** Zero tests in the entire project.
 
@@ -172,7 +260,7 @@ Then update `main.py` to remove the `create_all()` call and document migration w
 
 ---
 
-### 11. Add rate limiting on auth endpoints
+### 14. Add rate limiting on auth endpoints
 
 **Issue:** Login/register endpoints have no brute-force protection.
 
@@ -207,17 +295,20 @@ Then update `main.py` to remove the `create_all()` call and document migration w
 ```
 Priority    Task                         Effort    Impact
 ─────────────────────────────────────────────────────────
-High        Missing routes (404 fix)      ⭐        High
-High        Profile edit/setup pages      ⭐⭐       High
-High        Post Opportunity form         ⭐⭐       High
-Medium      Youth search page             ⭐⭐       Medium
-Medium      Pagination                    ⭐⭐       Medium
-Medium      Alembic migrations            ⭐⭐⭐      Medium
-Medium      Business ideas feature        ⭐⭐⭐      Medium
-Medium      Tests                         ⭐⭐⭐      High
-Low         Rate limiting                 ⭐⭐⭐      Low
-Low         Global error handler          ⭐        Low
-Low         Dead CSS cleanup              ⭐        Low
+High        Missing routes (404 fix)       ⭐        High
+High        Profile edit/setup pages       ⭐⭐       High
+High        Post Opportunity form          ⭐⭐       High
+High        Password reset                 ⭐⭐⭐      High
+High        Email verification             ⭐⭐⭐      High
+Medium      Refresh token rotation         ⭐⭐⭐      Medium
+Medium      Youth search page              ⭐⭐       Medium
+Medium      Pagination                     ⭐⭐       Medium
+Medium      Tests                          ⭐⭐⭐      High
+Medium      Alembic migrations             ⭐⭐⭐      Medium
+Medium      Business ideas feature         ⭐⭐⭐      Medium
+Low         Rate limiting                  ⭐⭐⭐      Low
+Low         Global error handler           ⭐        Low
+Low         Dead CSS cleanup               ⭐        Low
 ```
 
 ---
