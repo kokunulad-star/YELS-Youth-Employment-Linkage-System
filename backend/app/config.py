@@ -10,6 +10,12 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     UPLOAD_DIR: str = "uploads"
 
+    # Email
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_FROM: str = ""
+    MAIL_FROM_NAME: str = "YELS Platform"
+
     class Config:
         env_file = ".env"
 

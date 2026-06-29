@@ -1,17 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { MapPin, Calendar, Briefcase, ArrowLeft, DollarSign, BookOpen } from 'lucide-react'
+import { MapPin, Calendar, Briefcase, ArrowLeft, Upload, FileText, X } from 'lucide-react'
 import api from '../lib/api'
 import useAuthStore from '../store/authStore'
 import toast from 'react-hot-toast'
+
+const MAX_SIZE = 5 * 1024 * 1024 // 5 MB
+const ALLOWED = ['.pdf', '.doc', '.docx']
+const ALLOWED_MIME = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
 export default function OpportunityDetail() {
   const { id } = useParams()
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const fileRef = useRef(null)
+
   const [opp, setOpp] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [cover, setCover] = useState('')
+  const [docFile, setDocFile] = useState(null)
   const [applying, setApplying] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -22,16 +28,45 @@ export default function OpportunityDetail() {
       .finally(() => setLoading(false))
   }, [id])
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    const ext = '.' + file.name.split('.').pop().toLowerCase()
+    if (!ALLOWED.includes(ext)) {
+      toast.error('Only PDF, DOC, or DOCX files are allowed')
+      e.target.value = ''
+      return
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error('File must not exceed 5 MB')
+      e.target.value = ''
+      return
+    }
+    setDocFile(file)
+  }
+
+  const removeFile = () => {
+    setDocFile(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   const handleApply = async (e) => {
     e.preventDefault()
     if (!user) { navigate('/login'); return }
     setApplying(true)
     try {
-      await api.post('/applications/', { opportunity_id: parseInt(id), cover_letter: cover })
+      const fd = new FormData()
+      fd.append('opportunity_id', id)
+      if (docFile) fd.append('document', docFile)
+
+      await api.post('/applications/', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
       toast.success('Application submitted successfully!')
       setShowForm(false)
+      setDocFile(null)
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Could not apply')
+      toast.error(err.response?.data?.detail || 'Could not submit application')
     } finally { setApplying(false) }
   }
 
@@ -58,7 +93,7 @@ export default function OpportunityDetail() {
             <div className="opp-detail-badges">
               <span className={`badge ${typeColor}`} style={{ textTransform: 'capitalize' }}>{opp.type}</span>
               {opp.is_remote && <span className="badge badge-purple">Remote</span>}
-              <span className={`badge ${opp.status === 'open' ? 'badge-success' : 'badge-gray'}`}>{opp.status}</span>
+              <span className={`badge ${opp.status === 'open' ? 'badge-success' : 'badge-red'}`}>{opp.status}</span>
             </div>
             <h1 className="opp-detail-title">{opp.title}</h1>
             <div className="opp-detail-meta">
@@ -66,9 +101,9 @@ export default function OpportunityDetail() {
               {opp.deadline && <span><Calendar size={14} /> Deadline: {new Date(opp.deadline).toLocaleDateString()}</span>}
               {opp.industry && <span><Briefcase size={14} /> {opp.industry}</span>}
             </div>
-            {opp.salary_range && <div className="opp-detail-highlight" style={{ color: 'var(--primary)' }}>💰 Salary: {opp.salary_range}</div>}
+            {opp.salary_range  && <div className="opp-detail-highlight" style={{ color: 'var(--primary)' }}>💰 Salary: {opp.salary_range}</div>}
             {opp.funding_amount && <div className="opp-detail-highlight" style={{ color: 'var(--green)' }}>💵 Funding: ${Number(opp.funding_amount).toLocaleString()} — {opp.funding_type}</div>}
-            {opp.duration && <div className="opp-detail-highlight" style={{ color: 'var(--accent)' }}>⏱ Duration: {opp.duration} · {opp.mode?.replace('_', ' ')}</div>}
+            {opp.duration      && <div className="opp-detail-highlight" style={{ color: 'var(--accent)' }}>⏱ Duration: {opp.duration} · {opp.mode?.replace('_', ' ')}</div>}
           </div>
 
           {/* Body */}
@@ -104,20 +139,42 @@ export default function OpportunityDetail() {
               ) : (
                 <form onSubmit={handleApply} className="apply-form">
                   <h3>Submit Your Application</h3>
+
+                  {/* Document upload */}
                   <div className="form-group">
-                    <label className="form-label">Cover Letter <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
-                    <textarea
-                      rows={5}
-                      placeholder="Introduce yourself and explain why you're a great fit..."
-                      value={cover}
-                      onChange={e => setCover(e.target.value)}
-                    />
+                    <label className="form-label">
+                      Upload Document <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(PDF, DOC, DOCX — max 5 MB)</span>
+                    </label>
+                    {!docFile ? (
+                      <label className="file-upload-area">
+                        <input
+                          ref={fileRef}
+                          type="file"
+                          accept=".pdf,.doc,.docx"
+                          hidden
+                          onChange={handleFileChange}
+                        />
+                        <Upload size={22} style={{ opacity: .4 }} />
+                        <span>Click to upload or drag & drop</span>
+                        <small>PDF, DOC, DOCX · Max 5 MB</small>
+                      </label>
+                    ) : (
+                      <div className="file-preview">
+                        <FileText size={18} style={{ color: 'var(--primary)' }} />
+                        <span className="file-preview-name">{docFile.name}</span>
+                        <span className="file-preview-size">({(docFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <button type="button" className="file-remove-btn" onClick={removeFile} title="Remove">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', gap: '.75rem' }}>
+
+                  <div style={{ display: 'flex', gap: '.75rem', marginTop: '1rem' }}>
                     <button type="submit" className="btn btn-primary btn-lg" disabled={applying}>
                       {applying ? 'Submitting...' : 'Submit Application'}
                     </button>
-                    <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>
+                    <button type="button" className="btn btn-outline" onClick={() => { setShowForm(false); removeFile() }}>
                       Cancel
                     </button>
                   </div>

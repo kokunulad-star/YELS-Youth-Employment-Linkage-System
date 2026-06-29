@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, Text, Enum, TIMESTAMP,
+    Column, Integer, String, Text, Enum, TIMESTAMP,
     ForeignKey, UniqueConstraint
 )
 from sqlalchemy.orm import relationship
@@ -23,6 +23,7 @@ class Application(Base):
     youth_id       = Column(Integer, ForeignKey("youth_profiles.id", ondelete="CASCADE"), nullable=False)
     opportunity_id = Column(Integer, ForeignKey("opportunities.id", ondelete="CASCADE"), nullable=False)
     cover_letter   = Column(Text)
+    document_url   = Column(String(500), nullable=True)
     status         = Column(Enum(ApplicationStatus), default=ApplicationStatus.pending)
     applied_at     = Column(TIMESTAMP, server_default=func.now())
     updated_at     = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

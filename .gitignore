@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+backend/venv/
+venv/
+env/
+
+# Environment variables — NEVER commit these
+backend/.env
+.env
+
+# Uploads (user files)
+backend/uploads/
+
+# Node
+frontend/node_modules/
+node_modules/
+
+# Vite build output
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
