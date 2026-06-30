@@ -26,6 +26,8 @@ class ApplicationOut(BaseModel):
     id: int
     youth_id: int
     opportunity_id: int
+    applicant_name: Optional[str] = None
+    opportunity_title: Optional[str] = None
     cover_letter: Optional[str] = None
     document_url: Optional[str] = None
     status: ApplicationStatus

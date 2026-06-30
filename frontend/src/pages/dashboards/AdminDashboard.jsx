@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Tag, ToggleLeft, ToggleRight, Trash2, Plus, BarChart2, Shield, Briefcase, XCircle, CheckCircle, FileText, ClipboardList } from 'lucide-react'
+import { Users, Tag, ToggleLeft, ToggleRight, Trash2, Plus, BarChart2, Shield, Briefcase, XCircle, CheckCircle, FileText, ClipboardList, CreditCard } from 'lucide-react'
 import api from '../../lib/api'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
@@ -11,6 +11,7 @@ const TABS = [
   { id: 'opportunities', label: 'Opportunities',   icon: <Briefcase size={15} /> },
   { id: 'post',          label: 'Post Opportunity', icon: <Plus size={15} /> },
   { id: 'skills',        label: 'Skills',          icon: <Tag size={15} /> },
+  { id: 'payments',      label: 'Payments',        icon: <CreditCard size={15} /> },
 ]
 
 const EMPTY_OPP = {
@@ -185,26 +186,7 @@ export default function AdminDashboard() {
           {/* ── Overview ── */}
           {tab === 'overview' && (
             <div>
-              <div className="dash-section-title">User Breakdown</div>
-              <div className="dash-table-wrap">
-                <table className="dash-table">
-                  <thead><tr><th>Role</th><th>Count</th><th>Active</th></tr></thead>
-                  <tbody>
-                    {['youth', 'organization', 'admin'].map(role => {
-                      const roleUsers = users.filter(u => u.role === role)
-                      return (
-                        <tr key={role}>
-                          <td><span className="badge badge-blue" style={{ textTransform: 'capitalize' }}>{role}</span></td>
-                          <td>{roleUsers.length}</td>
-                          <td>{roleUsers.filter(u => u.is_active).length}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="dash-section-title" style={{ marginTop: '1.5rem' }}>Recent Opportunities</div>
+              <div className="dash-section-title">Recent Opportunities</div>
               <div className="dash-table-wrap">
                 <table className="dash-table">
                   <thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Location</th></tr></thead>
@@ -235,7 +217,7 @@ export default function AdminDashboard() {
                     <thead>
                       <tr>
                         <th>#</th>
-                        <th>Applicant ID</th>
+                        <th>Applicant</th>
                         <th>Opportunity</th>
                         <th>Applied</th>
                         <th>Document</th>
@@ -247,8 +229,8 @@ export default function AdminDashboard() {
                       {apps.map(a => (
                         <tr key={a.id}>
                           <td style={{ color: 'var(--text-muted)' }}>#{a.id}</td>
-                          <td>Youth #{a.youth_id}</td>
-                          <td>Opp #{a.opportunity_id}</td>
+                          <td style={{ fontWeight: 600 }}>{a.applicant_name || `Youth #${a.youth_id}`}</td>
+                          <td>{a.opportunity_title || `Opp #${a.opportunity_id}`}</td>
                           <td>{new Date(a.applied_at).toLocaleDateString()}</td>
                           <td>
                             {a.document_url
@@ -407,10 +389,6 @@ export default function AdminDashboard() {
 
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">Location</label>
-                      <input value="Dar es Salaam" disabled style={{ background: 'var(--bg-subtle, #f4f4f5)', color: 'var(--text-muted)' }} />
-                    </div>
-                    <div className="form-group">
                       <label className="form-label">Industry</label>
                       <input placeholder="e.g. Technology" value={form.industry} onChange={e => setForm({ ...form, industry: e.target.value })} />
                     </div>
@@ -419,30 +397,6 @@ export default function AdminDashboard() {
                       <input type="date" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} />
                     </div>
                   </div>
-
-                  {form.type === 'job' && (
-                    <div className="form-group">
-                      <label className="form-label">Salary Range</label>
-                      <input placeholder="e.g. TZS 500,000 – 800,000" value={form.salary_range} onChange={e => setForm({ ...form, salary_range: e.target.value })} />
-                    </div>
-                  )}
-                  {form.type === 'funding' && (
-                    <div className="form-group">
-                      <label className="form-label">Funding Amount (TZS)</label>
-                      <input type="number" placeholder="e.g. 5000000" value={form.funding_amount} onChange={e => setForm({ ...form, funding_amount: e.target.value })} />
-                    </div>
-                  )}
-                  {form.type === 'training' && (
-                    <div className="form-group">
-                      <label className="form-label">Duration</label>
-                      <input placeholder="e.g. 3 months" value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })} />
-                    </div>
-                  )}
-
-                  <label className="form-check">
-                    <input type="checkbox" checked={form.is_remote} onChange={e => setForm({ ...form, is_remote: e.target.checked })} />
-                    <span>Remote opportunity</span>
-                  </label>
 
                   <div style={{ marginTop: '1.5rem', display: 'flex', gap: '.75rem' }}>
                     <button type="submit" className="btn btn-primary btn-lg" disabled={posting}>{posting ? 'Posting...' : 'Post Opportunity'}</button>
@@ -479,6 +433,18 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Payments ── */}
+          {tab === 'payments' && (
+            <div>
+              <div className="dash-section-title">Payments</div>
+              <div className="empty-state">
+                <CreditCard size={40} style={{ color: 'var(--text-muted)', marginBottom: '0.75rem' }} />
+                <p>No payment records yet.</p>
+                <p style={{ fontSize: '.85rem', color: 'var(--text-muted)' }}>Payment transactions will appear here once processed.</p>
+              </div>
             </div>
           )}
         </div>

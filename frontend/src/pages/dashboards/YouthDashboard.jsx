@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Briefcase, Clock, CheckCircle, User, Upload, Search, Bell, Edit2, Save, X, FileText } from 'lucide-react'
+import { Briefcase, Clock, CheckCircle, User, Upload, Search, Bell, Edit2, Save, X, FileText, CreditCard } from 'lucide-react'
 import api from '../../lib/api'
 import useAuthStore from '../../store/authStore'
 import toast from 'react-hot-toast'
@@ -13,9 +13,259 @@ const STATUS_BADGE = {
   rejected:    'badge-red',
 }
 
+const PAY_STATUS_BADGE = {
+  completed: 'badge-success',
+  pending:   'badge-amber',
+  failed:    'badge-red',
+}
+
+const METHOD_LABEL = {
+  mpesa: 'M-Pesa',
+  card:  'Card',
+  bank:  'Bank Transfer',
+}
+
+// ── Payment Modal ─────────────────────────────────────────────────────────────
+function PaymentModal({ opp, onClose, onSuccess }) {
+  const [method, setMethod] = useState('mpesa')
+  const [reference, setReference] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const { data } = await api.post('/payments/', {
+        opportunity_id: opp.id,
+        method,
+        reference: reference.trim() || undefined,
+      })
+      toast.success('Payment details submitted! Your enrollment will be confirmed shortly.')
+      onSuccess(data)
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Submission failed')
+    } finally { setSubmitting(false) }
+  }
+
+  const price = opp.funding_amount ? `TZS ${Number(opp.funding_amount).toLocaleString()}` : ''
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Payment Details</h3>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className="modal-body">
+          <div className="payment-program-info">
+            <div className="payment-program-name">{opp.title}</div>
+            {price && <div className="payment-amount">{price}</div>}
+          </div>
+
+          <p style={{ fontSize: '.875rem', color: 'var(--text-muted)', margin: '1rem 0 .5rem' }}>
+            Make your payment using any of the methods below, then enter your transaction reference so we can confirm your enrollment.
+          </p>
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">Payment Method</label>
+              <div className="payment-methods">
+                {[
+                  { value: 'mpesa', label: 'M-Pesa', emoji: '📱' },
+                  { value: 'bank',  label: 'Bank',   emoji: '🏦' },
+                  { value: 'card',  label: 'Card',   emoji: '💳' },
+                ].map(m => (
+                  <button key={m.value} type="button"
+                    className={`payment-method-btn${method === m.value ? ' active' : ''}`}
+                    onClick={() => setMethod(m.value)}
+                  >
+                    <span className="payment-method-emoji">{m.emoji}</span>
+                    <span>{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {method === 'mpesa' && (
+              <div className="payment-details-box">
+                <div className="payment-details-row"><span>Lipa Number</span><strong>154678</strong></div>
+                <div className="payment-details-row"><span>Name</span><strong>DATIVA LUCAS</strong></div>
+                {price && <div className="payment-details-row"><span>Amount</span><strong>{price}</strong></div>}
+              </div>
+            )}
+
+            {method === 'bank' && (
+              <div>
+                <div className="payment-details-box" style={{ marginBottom: '.75rem' }}>
+                  <div className="payment-details-label">CRDB Bank</div>
+                  <div className="payment-details-row"><span>Account Number</span><strong>0150694823001</strong></div>
+                  <div className="payment-details-row"><span>Account Name</span><strong>YELS PLATFORM CO.</strong></div>
+                  {price && <div className="payment-details-row"><span>Amount</span><strong>{price}</strong></div>}
+                </div>
+                <div className="payment-details-box">
+                  <div className="payment-details-label">NMB Bank</div>
+                  <div className="payment-details-row"><span>Account Number</span><strong>40271089500</strong></div>
+                  <div className="payment-details-row"><span>Account Name</span><strong>YELS PLATFORM CO.</strong></div>
+                  {price && <div className="payment-details-row"><span>Amount</span><strong>{price}</strong></div>}
+                </div>
+              </div>
+            )}
+
+            {method === 'card' && (
+              <div className="payment-details-box">
+                <div className="payment-details-row"><span>Card payments</span><strong>Contact admin for card details</strong></div>
+              </div>
+            )}
+
+            <div className="form-group" style={{ marginTop: '1.25rem' }}>
+              <label className="form-label">
+                Transaction Reference <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(required)</span>
+              </label>
+              <input
+                placeholder={method === 'mpesa' ? 'e.g. QJK7T3XY9Z' : 'e.g. Bank slip / receipt number'}
+                value={reference}
+                onChange={e => setReference(e.target.value)}
+                required
+                style={{ textTransform: method === 'mpesa' ? 'uppercase' : 'none' }}
+              />
+              <p style={{ fontSize: '.78rem', color: 'var(--text-muted)', marginTop: '.3rem' }}>
+                Enter the reference number from your payment receipt or SMS confirmation.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '.75rem', marginTop: '1.25rem' }}>
+              <button type="submit" className="btn btn-primary btn-lg" style={{ flex: 1 }} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit Payment Reference'}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Payments Tab ──────────────────────────────────────────────────────────────
+function PaymentsTab() {
+  const [payments, setPayments]   = useState([])
+  const [paidOpps, setPaidOpps]   = useState([])       // opportunity_ids already paid
+  const [trainingOpps, setTrainingOpps] = useState([]) // paid training programs available
+  const [payingOpp, setPayingOpp] = useState(null)     // opp being paid for
+  const [loading, setLoading]     = useState(true)
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/payments/my').catch(() => ({ data: [] })),
+      api.get('/opportunities/?type=training').catch(() => ({ data: [] })),
+    ]).then(([pRes, oRes]) => {
+      const myPayments = pRes.data || []
+      setPayments(myPayments)
+      setPaidOpps(myPayments.filter(p => p.status === 'completed').map(p => p.opportunity_id))
+      // Only show training opps that have a price (funding_amount > 0)
+      setTrainingOpps((oRes.data || []).filter(o => o.funding_amount && Number(o.funding_amount) > 0))
+    }).finally(() => setLoading(false))
+  }, [])
+
+  const handleSuccess = (newPayment) => {
+    setPayments(prev => [newPayment, ...prev])
+    setPaidOpps(prev => [...prev, newPayment.opportunity_id])
+    setPayingOpp(null)
+  }
+
+  if (loading) return <div className="spinner" style={{ margin: '3rem auto' }} />
+
+  return (
+    <div>
+      {payingOpp && (
+        <PaymentModal
+          opp={payingOpp}
+          onClose={() => setPayingOpp(null)}
+          onSuccess={handleSuccess}
+        />
+      )}
+
+      {/* Available paid programs */}
+      {trainingOpps.length > 0 && (
+        <>
+          <div className="dash-section-title">Available Paid Programs</div>
+          <div className="payments-programs-grid">
+            {trainingOpps.map(opp => {
+              const paid = paidOpps.includes(opp.id)
+              return (
+                <div key={opp.id} className="payment-program-card">
+                  <div className="payment-program-card-type">
+                    <span className="badge badge-amber">Training</span>
+                    {opp.industry && <span style={{ fontSize: '.8rem', color: 'var(--text-muted)' }}>{opp.industry}</span>}
+                  </div>
+                  <div className="payment-program-card-title">{opp.title}</div>
+                  {opp.duration && <div style={{ fontSize: '.82rem', color: 'var(--text-muted)', marginBottom: '.5rem' }}>⏱ {opp.duration}</div>}
+                  <div className="payment-program-card-price">TZS {Number(opp.funding_amount).toLocaleString()}</div>
+                  {paid ? (
+                    <span className="badge badge-success" style={{ marginTop: '.75rem' }}>✓ Enrolled</span>
+                  ) : (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ marginTop: '.75rem', width: '100%' }}
+                      onClick={() => setPayingOpp(opp)}
+                    >
+                      <CreditCard size={13} /> Pay & Enroll
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Payment history */}
+      <div className="dash-section-title" style={{ marginTop: trainingOpps.length > 0 ? '2rem' : 0 }}>Payment History</div>
+      {payments.length === 0 ? (
+        <div className="empty-state">
+          <CreditCard size={40} style={{ color: 'var(--text-muted)', marginBottom: '.75rem' }} />
+          <p>No payments yet.</p>
+          <p style={{ fontSize: '.85rem', color: 'var(--text-muted)' }}>Payments for paid programs will appear here.</p>
+        </div>
+      ) : (
+        <div className="dash-table-wrap">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Program</th>
+                <th>Amount (TZS)</th>
+                <th>Method</th>
+                <th>Reference</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map(p => (
+                <tr key={p.id}>
+                  <td style={{ color: 'var(--text-muted)' }}>#{p.id}</td>
+                  <td style={{ fontWeight: 600 }}>{p.opportunity_title || `Program #${p.opportunity_id}`}</td>
+                  <td>{Number(p.amount).toLocaleString()}</td>
+                  <td>{METHOD_LABEL[p.method] || p.method}</td>
+                  <td style={{ fontFamily: 'monospace', fontSize: '.82rem' }}>{p.reference || '—'}</td>
+                  <td>{new Date(p.paid_at).toLocaleDateString()}</td>
+                  <td><span className={`badge ${PAY_STATUS_BADGE[p.status] || 'badge-gray'}`}>{p.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const TABS = [
-  { id: 'overview',     label: 'Overview',        icon: <Briefcase size={15} /> },
   { id: 'applications', label: 'My Applications',  icon: <Clock size={15} /> },
+  { id: 'overview',     label: 'Overview',         icon: <Briefcase size={15} /> },
+  { id: 'payments',     label: 'Payments',         icon: <CreditCard size={15} /> },
   { id: 'profile',      label: 'My Profile',       icon: <User size={15} /> },
 ]
 
@@ -339,6 +589,11 @@ export default function YouthDashboard() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* ── Payments ── */}
+          {tab === 'payments' && (
+            <PaymentsTab />
           )}
         </div>
       </main>

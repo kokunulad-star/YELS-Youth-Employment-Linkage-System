@@ -6,3 +6,4 @@ from app.models.opportunity import Opportunity, OpportunitySkill
 from app.models.application import Application, ApplicationStatusHistory
 from app.models.notification import Notification
 from app.models.message import Conversation, Message
+from app.models.payment import Payment

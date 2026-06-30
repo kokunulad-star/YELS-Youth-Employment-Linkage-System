@@ -173,7 +173,22 @@ def list_all_applications(
     db: Session = Depends(get_db),
     _=Depends(require_role(UserRole.admin)),
 ):
-    return db.query(Application).order_by(Application.applied_at.desc()).all()
+    from sqlalchemy.orm import joinedload
+    applications = (
+        db.query(Application)
+        .options(joinedload(Application.youth), joinedload(Application.opportunity))
+        .order_by(Application.applied_at.desc())
+        .all()
+    )
+    results = []
+    for app in applications:
+        out = ApplicationOut.model_validate(app)
+        if app.youth:
+            out.applicant_name = f"{app.youth.first_name} {app.youth.last_name}"
+        if app.opportunity:
+            out.opportunity_title = app.opportunity.title
+        results.append(out)
+    return results
 
 
 @router.patch("/applications/{app_id}/approve", response_model=ApplicationOut)

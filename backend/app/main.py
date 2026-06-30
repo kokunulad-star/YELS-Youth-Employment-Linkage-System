@@ -9,7 +9,7 @@ from app.config import get_settings
 # Import all models so SQLAlchemy registers them before create_all
 import app.models  # noqa: F401
 
-from app.routers import auth, youth, profiles, opportunities, applications, notifications, messages, admin, skills
+from app.routers import auth, youth, profiles, opportunities, applications, notifications, messages, admin, skills, payments
 
 settings = get_settings()
 
@@ -48,6 +48,7 @@ app.include_router(notifications.router)
 app.include_router(messages.router)
 app.include_router(skills.router)
 app.include_router(admin.router)
+app.include_router(payments.router)
 
 
 @app.get("/", tags=["Health"])

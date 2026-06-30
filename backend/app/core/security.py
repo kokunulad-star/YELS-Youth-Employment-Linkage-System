@@ -56,10 +56,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 def require_role(*roles):
     """Dependency factory: restrict endpoint to specific roles."""
     def checker(current_user=Depends(get_current_user)):
-        if current_user.role not in roles:
+        # Support both enum values and plain strings for comparison
+        user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
+        allowed = [r.value if hasattr(r, 'value') else str(r) for r in roles]
+        if user_role not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access restricted to: {', '.join(roles)}"
+                detail=f"Access restricted. Required role(s): {', '.join(allowed)}. Your role: {user_role}"
             )
         return current_user
     return checker
